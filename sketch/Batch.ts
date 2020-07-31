@@ -11,6 +11,7 @@ class Batch {
 	draw() {
 		for (const rocket of this.rockets) {
 			rocket.draw();
+			noFill();
 		}
 	}
 
