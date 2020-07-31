@@ -8,6 +8,12 @@ class Batch {
 		}
 	}
 
+	setSpeed(speed: number) {
+		for (const rocket of this.rockets) {
+			rocket.setSpeed(speed);
+		}
+	}
+
 	draw() {
 		for (const rocket of this.rockets) {
 			rocket.draw();

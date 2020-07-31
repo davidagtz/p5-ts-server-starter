@@ -17,13 +17,20 @@ class Rocket {
 	constructor(x: number, y: number) {
 		this.bounds = new Geometry.Rectangle(x, y, 10, 20);
 		// this.vel = p5.Vector.random2D();
-		this.vel = p5.Vector.fromAngle(PI / 2);
+		this.vel = p5.Vector.fromAngle(PI / 4);
 		this.vel.rotate(random(-PI / 4, PI / 4));
 
 		this.dead = false;
 	}
 
+	setSpeed(speed: number) {
+		this.vel.setMag(speed);
+	}
+
 	update() {
+		if (this.bounds.x > width || this.bounds.x < 0) this.dead = true;
+		if (this.bounds.y > height || this.bounds.y < 0) this.dead = true;
+
 		this.bounds.angle = this.vel.heading();
 
 		if (!this.dead) {
@@ -46,9 +53,6 @@ class Rocket {
 
 		this.vel.x += acc.x;
 		this.vel.y += acc.y;
-
-		if (this.bounds.x > width || this.bounds.x < 0) this.dead = true;
-		if (this.bounds.y > height || this.bounds.y < 0) this.dead = true;
 	}
 
 	intersects(p: Planet): boolean {

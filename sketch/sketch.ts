@@ -11,11 +11,25 @@ let slider: p5.Element;
 
 function setup() {
 	createCanvas(WIDTH, HEIGHT);
-	batch = new Batch(BATCH_SIZE, width / 2, height / 3);
 
-	planets = [];
-	planets.push(new Planet(width / 4, height / 2, width / 20, "#ff0"));
-	planets.push(new Planet((3 * width) / 4, height / 2, width / 20, "#ff0"));
+	const BIG_R = width / 20;
+	const W5 = width / 5;
+	const H6 = height / 6;
+
+	batch = new Batch(
+		BATCH_SIZE,
+		4 * W5 + (2 * BIG_R) / 3,
+		2 * H6 + (2 * BIG_R) / 3
+	);
+	batch.setSpeed(2);
+
+	const SUN = new Planet(W5, 5 * H6, BIG_R, "#ff0");
+	const MERCURY = new Planet(2 * W5, 4 * H6, BIG_R / 3, "#750");
+	const VENUS = new Planet(3 * W5, 3 * H6, BIG_R / 3, "#070");
+	const EARTH = new Planet(4 * W5, 2 * H6, BIG_R / 2, "#13f");
+	const MARS = new Planet(5 * W5, 1 * H6, BIG_R / 2, "#720");
+
+	planets = [SUN, MERCURY, VENUS, EARTH, MARS];
 
 	slider = createSlider(0, 10, G, 0.1);
 
