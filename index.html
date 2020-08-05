@@ -1,29 +1,69 @@
 <html>
-  <head>
-    <script
-      src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.0.0/p5.min.js"
-      integrity="sha256-Pg1di+fBF53Rbh9oZR/FeD1xsFzTLC963lcac1D0ias="
-      crossorigin="anonymous"
-    ></script>
-    <script
-      src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.0.0/addons/p5.sound.min.js"
-      integrity="sha256-UySade9ZHGHdcdkTGEpftp/ZZbn9HYCe53RkvVFm9sM="
-      crossorigin="anonymous"
-    ></script>
+	<head>
+		<script
+			src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.0.0/p5.min.js"
+			integrity="sha256-Pg1di+fBF53Rbh9oZR/FeD1xsFzTLC963lcac1D0ias="
+			crossorigin="anonymous"
+		></script>
+		<script
+			src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.0.0/addons/p5.sound.min.js"
+			integrity="sha256-UySade9ZHGHdcdkTGEpftp/ZZbn9HYCe53RkvVFm9sM="
+			crossorigin="anonymous"
+		></script>
 
-    <script src="build/build.js"></script>
+		<script src="build/build.js"></script>
 
-    <link rel="shortcut icon" href="https://p5js.org/assets/img/favicon.ico" />
-    <link rel="icon" href="https://p5js.org/assets/img/favicon.ico" />
+		<link
+			rel="shortcut icon"
+			href="https://p5js.org/assets/img/favicon.ico"
+		/>
+		<link rel="icon" href="https://p5js.org/assets/img/favicon.ico" />
 
-    <style>
-      * {
-        padding: 0px;
-        margin: 0px;
-      }
-    </style>
-    <script></script>
-  </head>
+		<style>
+			* {
+				padding: 0px;
+				margin: 0px;
+				box-sizing: border-box;
+			}
 
-  <body></body>
+			body {
+				display: flex;
+				height: 100%;
+				width: 100%;
+			}
+
+			/* body * {
+        
+      } */
+
+			#canvas {
+				display: inline-block;
+				flex-basis: 80%;
+				flex-shrink: 0;
+				flex-grow: 0;
+			}
+			#controls {
+				display: flex;
+				/* flex-basis: calc(20% + 2em); */
+				flex-basis: 0;
+				background-color: #333;
+				flex-direction: column;
+				padding: 1em;
+				flex-shrink: 1;
+				flex-grow: 1;
+				max-width: 20%;
+			}
+			#controls > * {
+				margin-bottom: 1em;
+			}
+		</style>
+		<script></script>
+	</head>
+
+	<body>
+		<div id="canvas"></div>
+		<div id="controls">
+			<div id="planets"></div>
+		</div>
+	</body>
 </html>

@@ -292,21 +292,6 @@ var System = (function () {
         }
         for (var _d = 0, _e = this.bodies; _d < _e.length; _d++) {
             var body = _e[_d];
-            for (var _f = 0, _g = this.bodies; _f < _g.length; _f++) {
-                var m2 = _g[_f];
-                if (body !== m2) {
-                    if (body.bounds.intersects(m2.bounds)) {
-                        var vector = System.vectorBetween(body, m2);
-                        vector.rotate(PI);
-                        body.applyForce(vector.mult(0.5));
-                        console.log("intersect");
-                    }
-                    console.log("no intersect");
-                }
-            }
-        }
-        for (var _h = 0, _j = this.bodies; _h < _j.length; _h++) {
-            var body = _j[_h];
             body.vel.add(body.acc);
             body.pos.add(body.vel);
             body.acc.setMag(0);
@@ -330,12 +315,8 @@ var System = (function () {
     };
     return System;
 }());
-var WIDTH = 800;
-var HEIGHT = 600;
-var BIG_R = WIDTH / 20;
+var BIG_R;
 var numBodies = 5;
-var WS = WIDTH / (numBodies + 1);
-var HS = HEIGHT / (numBodies + 1);
 var BATCH_SIZE = 16;
 var iterations = 0;
 var ITERATION_MAX = 300;
@@ -345,21 +326,24 @@ var planets;
 var solarSystem;
 var slider;
 function setup() {
-    createCanvas(WIDTH, HEIGHT);
+    var container = document.getElementById("canvas");
+    var controls = document.getElementById("controls");
+    var canvas = createCanvas(container.getBoundingClientRect().width, container.getBoundingClientRect().height);
+    canvas.parent(container);
+    BIG_R = width / 20;
     solarSystem = new System(2);
-    batch = new Batch(BATCH_SIZE, 4 * WS + (2 * BIG_R) / 3, 2 * HS + (2 * BIG_R) / 3);
     var SUN = new Planet(width / 2, height / 2, BIG_R, "#ff0");
     SUN.mass = BIG_R * 125;
-    var MERCURY = new Planet(2 * WS, 4 * HS, BIG_R / 3, "#750");
+    var MERCURY = new Planet(0, 0, BIG_R / 3, "#750");
     System.offset(MERCURY, SUN, 0, height / 4);
     solarSystem.orbit(MERCURY, SUN);
-    var VENUS = new Planet(3 * WS, 3 * HS, BIG_R / 3, "#070");
+    var VENUS = new Planet(0, 0, BIG_R / 3, "#070");
     System.offset(VENUS, SUN, height / 3, 0);
     solarSystem.orbit(VENUS, SUN);
-    var EARTH = new Planet(4 * WS, 2 * HS, BIG_R / 2, "#13f");
+    var EARTH = new Planet(0, 0, BIG_R / 2, "#13f");
     System.offset(EARTH, SUN, 0, -height / 2);
     solarSystem.orbit(EARTH, SUN);
-    var MARS = new Planet(5 * WS, 1 * HS, BIG_R / 2, "#720");
+    var MARS = new Planet(0, 0, BIG_R / 2, "#720");
     System.offset(MARS, SUN, -height / 2, 0);
     solarSystem.orbit(MARS, SUN);
     solarSystem.addBody(SUN);
@@ -367,12 +351,14 @@ function setup() {
     solarSystem.addBody(VENUS);
     solarSystem.addBody(EARTH);
     solarSystem.addBody(MARS);
-    slider = createSlider(0, 10, solarSystem.G, 0.1);
-    createButton("Restart").mousePressed(function () {
+    slider = createSlider(0, 10, solarSystem.G, 0.1).parent(controls);
+    createButton("Restart")
+        .mousePressed(function () {
         batch = new Batch(BATCH_SIZE, width / 2, height / 3);
         iterations = 0;
         loop();
-    });
+    })
+        .parent(controls);
 }
 function draw() {
     solarSystem.G = slider.value();

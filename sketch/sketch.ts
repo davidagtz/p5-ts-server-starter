@@ -1,9 +1,5 @@
-const WIDTH = 800;
-const HEIGHT = 600;
-const BIG_R = WIDTH / 20;
+let BIG_R: number;
 const numBodies = 5;
-const WS = WIDTH / (numBodies + 1);
-const HS = HEIGHT / (numBodies + 1);
 
 // Must be power of two
 const BATCH_SIZE = 16;
@@ -17,32 +13,40 @@ let solarSystem: System;
 let slider: p5.Element;
 
 function setup() {
-	createCanvas(WIDTH, HEIGHT);
+	const container = document.getElementById("canvas");
+	const controls = document.getElementById("controls");
+
+	const canvas = createCanvas(
+		container.getBoundingClientRect().width,
+		container.getBoundingClientRect().height
+	);
+	canvas.parent(container);
+	BIG_R = width / 20;
 
 	solarSystem = new System(2);
 
-	batch = new Batch(
-		BATCH_SIZE,
-		4 * WS + (2 * BIG_R) / 3,
-		2 * HS + (2 * BIG_R) / 3
-	);
+	// batch = new Batch(
+	// 	BATCH_SIZE,
+	// 	4 * WS + (2 * BIG_R) / 3,
+	// 	2 * HS + (2 * BIG_R) / 3
+	// );
 
 	const SUN = new Planet(width / 2, height / 2, BIG_R, "#ff0");
 	SUN.mass = BIG_R * 125;
 
-	const MERCURY = new Planet(2 * WS, 4 * HS, BIG_R / 3, "#750");
+	const MERCURY = new Planet(0, 0, BIG_R / 3, "#750");
 	System.offset(MERCURY, SUN, 0, height / 4);
 	solarSystem.orbit(MERCURY, SUN);
 
-	const VENUS = new Planet(3 * WS, 3 * HS, BIG_R / 3, "#070");
+	const VENUS = new Planet(0, 0, BIG_R / 3, "#070");
 	System.offset(VENUS, SUN, height / 3, 0);
 	solarSystem.orbit(VENUS, SUN);
 
-	const EARTH = new Planet(4 * WS, 2 * HS, BIG_R / 2, "#13f");
+	const EARTH = new Planet(0, 0, BIG_R / 2, "#13f");
 	System.offset(EARTH, SUN, 0, -height / 2);
 	solarSystem.orbit(EARTH, SUN);
 
-	const MARS = new Planet(5 * WS, 1 * HS, BIG_R / 2, "#720");
+	const MARS = new Planet(0, 0, BIG_R / 2, "#720");
 	System.offset(MARS, SUN, -height / 2, 0);
 	solarSystem.orbit(MARS, SUN);
 
@@ -52,13 +56,15 @@ function setup() {
 	solarSystem.addBody(EARTH);
 	solarSystem.addBody(MARS);
 
-	slider = createSlider(0, 10, solarSystem.G, 0.1);
+	slider = createSlider(0, 10, solarSystem.G, 0.1).parent(controls);
 
-	createButton("Restart").mousePressed(() => {
-		batch = new Batch(BATCH_SIZE, width / 2, height / 3);
-		iterations = 0;
-		loop();
-	});
+	createButton("Restart")
+		.mousePressed(() => {
+			batch = new Batch(BATCH_SIZE, width / 2, height / 3);
+			iterations = 0;
+			loop();
+		})
+		.parent(controls);
 }
 
 function draw() {

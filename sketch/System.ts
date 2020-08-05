@@ -45,19 +45,19 @@ class System {
 			}
 		}
 
-		for (const body of this.bodies) {
-			for (const m2 of this.bodies) {
-				if (body !== m2) {
-					if (body.bounds.intersects(m2.bounds)) {
-						const vector = System.vectorBetween(body, m2);
-						vector.rotate(PI);
-						body.applyForce(vector.mult(0.5));
-						console.log("intersect");
-					}
-					console.log("no intersect");
-				}
-			}
-		}
+		// for (const body of this.bodies) {
+		// 	for (const m2 of this.bodies) {
+		// 		if (body !== m2) {
+		// 			if (body.bounds.intersects(m2.bounds)) {
+		// 				const vector = System.vectorBetween(body, m2);
+		// 				vector.rotate(PI);
+		// 				body.applyForce(vector.mult(0.5));
+		// 				console.log("intersect");
+		// 			}
+		// 			console.log("no intersect");
+		// 		}
+		// 	}
+		// }
 
 		for (const body of this.bodies) {
 			body.vel.add(body.acc);
