@@ -2,57 +2,100 @@ interface Math {
 	hypot(...n: number[]): number;
 }
 
-class Rocket {
+class Rocket implements SystemBody {
 	bounds: Geometry.Rectangle;
-	vel: p5.Vector;
+	start: Geometry.Point;
 	dead: boolean;
+	diedOn: number;
+	dna: p5.Vector[];
+	fitness: number;
+	mass: number = 0;
+	acc: p5.Vector;
 
-	get x() {
-		return this.bounds.x;
-	}
-	get y() {
-		return this.bounds.y;
-	}
-
-	constructor(x: number, y: number) {
+	constructor(x: number, y: number, dna?: p5.Vector[]) {
 		this.bounds = new Geometry.Rectangle(x, y, 10, 20);
+		this.start = new Geometry.Point(x, y);
+		this.acc = createVector(0, 0);
 		// this.vel = p5.Vector.random2D();
-		this.vel = p5.Vector.fromAngle(PI / 4);
-		this.vel.rotate(random(-PI / 4, PI / 4));
+		// this.vel = p5.Vector.fromAngle(PI / 4);
+		// this.vel.rotate(random(-PI / 4, PI / 4));
 
+		this.dead = false;
+
+		this.dna = [];
+		if (!dna) {
+			for (let i = 0; i < ITERATION_MAX; i++) {
+				const nucleotide = p5.Vector.random2D();
+				nucleotide.setMag(random(0, 3));
+				this.dna.push(nucleotide);
+			}
+		} else {
+			this.dna = dna;
+		}
+	}
+
+	get pos() {
+		return this.bounds.corner;
+	}
+
+	reset() {
+		this.pos.x = this.start.x;
+		this.pos.y = this.start.y;
+		this.diedOn = 0;
 		this.dead = false;
 	}
 
-	setSpeed(speed: number) {
-		this.vel.setMag(speed);
+	die() {
+		this.dead = true;
+		this.diedOn = iterations;
+	}
+
+	evaluate() {
+		this.fitness =
+			this.diedOn +
+			10 *
+				Math.hypot(
+					this.start.x - this.pos.x,
+					this.start.y - this.pos.y
+				) -
+			100 * (this.dead ? 1 : 0);
+		return this.fitness;
+	}
+
+	static from(rocket: Rocket) {
+		return new Rocket(rocket.pos.x, rocket.pos.y, rocket.dna);
+	}
+
+	get vel() {
+		return this.dna[iterations];
 	}
 
 	update() {
-		if (this.bounds.x > width || this.bounds.x < 0) this.dead = true;
-		if (this.bounds.y > height || this.bounds.y < 0) this.dead = true;
+		if (
+			this.pos.x > width ||
+			this.pos.x < 0 ||
+			this.pos.y > height ||
+			this.pos.y < 0
+		)
+			this.die();
 
 		this.bounds.angle = this.vel.heading();
 
 		if (!this.dead) {
-			this.bounds.x += this.vel.x;
-			this.bounds.y += this.vel.y;
+			this.pos.x += this.vel.x;
+			this.pos.y += this.vel.y;
 		}
 
-		const acc = new p5.Vector();
 		for (const planet of planets) {
 			if (this.intersects(planet)) {
-				this.dead = true;
+				this.die();
 				return;
 			}
-			const gravity = createVector(planet.x - this.x, planet.y - this.y);
-			gravity.setMag(
-				(G * planet.mass()) / (gravity.mag() * gravity.mag())
-			);
-			acc.add(gravity);
 		}
+	}
 
-		this.vel.x += acc.x;
-		this.vel.y += acc.y;
+	applyForce(force: p5.Vector) {
+		this.acc.add(force);
 	}
 
 	intersects(p: Planet): boolean {

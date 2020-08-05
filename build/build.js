@@ -1,17 +1,26 @@
 var Batch = (function () {
-    function Batch(size, x, y) {
+    function Batch(size, x, y, rockets) {
         if (x === void 0) { x = 0; }
         if (y === void 0) { y = 0; }
         this.rockets = [];
-        for (var _ = 0; _ < size; _++) {
-            this.rockets.push(new Rocket(x, y));
+        this.x = x;
+        this.y = y;
+        if (!rockets) {
+            for (var _ = 0; _ < size; _++) {
+                this.rockets.push(new Rocket(x, y));
+            }
+        }
+        else {
+            this.rockets = rockets;
         }
     }
-    Batch.prototype.setSpeed = function (speed) {
+    Batch.prototype.isDead = function () {
         for (var _i = 0, _a = this.rockets; _i < _a.length; _i++) {
             var rocket = _a[_i];
-            rocket.setSpeed(speed);
+            if (!rocket.dead)
+                return false;
         }
+        return true;
     };
     Batch.prototype.draw = function () {
         for (var _i = 0, _a = this.rockets; _i < _a.length; _i++) {
@@ -20,11 +29,26 @@ var Batch = (function () {
             noFill();
         }
     };
-    Batch.prototype.update = function () {
+    Batch.prototype.evaluate = function () {
+        var sorted = [];
         for (var _i = 0, _a = this.rockets; _i < _a.length; _i++) {
             var rocket = _a[_i];
-            rocket.update();
+            var fitness = rocket.evaluate();
+            if (sorted.length === 0) {
+                sorted.push(rocket);
+                continue;
+            }
+            for (var i = 0; i < sorted.length; i++) {
+                if (fitness >= sorted[i].fitness) {
+                    sorted.splice(i, 0, rocket);
+                    break;
+                }
+            }
+            if (sorted[sorted.length - 1].fitness > fitness) {
+                sorted.push(rocket);
+            }
         }
+        return sorted;
     };
     return Batch;
 }());
@@ -34,10 +58,18 @@ var Geometry;
         return false;
     }
     Geometry.lineIntersectsCircle = lineIntersectsCircle;
-    function rectangleInCircle(rect, circle) {
-        return false;
-    }
-    Geometry.rectangleInCircle = rectangleInCircle;
+    var Point = (function () {
+        function Point(x, y) {
+            this.x = x;
+            this.y = y;
+        }
+        Point.prototype.add = function (v) {
+            this.x += v.x;
+            this.y += v.y;
+        };
+        return Point;
+    }());
+    Geometry.Point = Point;
     function rotatePoint(p, around, angle) {
         var dx = p.x - around.x;
         var dy = p.y - around.y;
@@ -53,15 +85,23 @@ var Geometry;
         function Rectangle(x, y, w, h, angle) {
             if (angle === void 0) { angle = 0; }
             this.type = "rectangle";
-            this.x = x;
-            this.y = y;
+            this.corner = new Point(x, y);
             this.w = w;
             this.h = h;
             this.angle = angle;
         }
+        Rectangle.prototype.intersects = function (b) {
+            if (b.type === "circle") {
+                return b.intersectRect(this);
+            }
+            return false;
+        };
         Object.defineProperty(Rectangle.prototype, "center", {
             get: function () {
-                return { x: this.x + this.w / 2, y: this.y + this.h / 2 };
+                return {
+                    x: this.corner.x + this.w / 2,
+                    y: this.corner.y + this.h / 2,
+                };
             },
             enumerable: true,
             configurable: true
@@ -72,20 +112,9 @@ var Geometry;
     var Circle = (function () {
         function Circle(x, y, r) {
             this.type = "circle";
-            this.x = x;
-            this.y = y;
+            this.center = new Point(x, y);
             this.r = r;
         }
-        Object.defineProperty(Circle.prototype, "center", {
-            get: function () {
-                return {
-                    x: this.x,
-                    y: this.y,
-                };
-            },
-            enumerable: true,
-            configurable: true
-        });
         Circle.prototype.intersects = function (b) {
             if (b.type === "rectangle") {
                 return this.intersectRect(b);
@@ -93,7 +122,7 @@ var Geometry;
             return false;
         };
         Circle.prototype.intersectRect = function (rect) {
-            var newPoint = Geometry.rotatePoint(this.center, { x: rect.x, y: rect.y }, rect.angle + PI / 2);
+            var newPoint = Geometry.rotatePoint(this.center, rect.corner, rect.angle + PI / 2);
             var dx = Math.abs(newPoint.x - rect.center.x);
             var dy = Math.abs(newPoint.y - rect.center.y);
             if (dx > this.r + rect.w / 2)
@@ -115,78 +144,102 @@ var Planet = (function () {
     function Planet(x, y, r, color) {
         this.bounds = new Geometry.Circle(x, y, r);
         this.color = color;
+        this.mass = r;
+        this.vel = createVector(0, 0);
+        this.acc = createVector(0, 0);
     }
-    Object.defineProperty(Planet.prototype, "x", {
+    Object.defineProperty(Planet.prototype, "pos", {
         get: function () {
-            return this.bounds.x;
+            return this.bounds.center;
         },
         enumerable: true,
         configurable: true
     });
-    Object.defineProperty(Planet.prototype, "y", {
-        get: function () {
-            return this.bounds.y;
-        },
-        enumerable: true,
-        configurable: true
-    });
+    Planet.prototype.applyForce = function (force) {
+        this.acc.add(force);
+    };
     Planet.prototype.draw = function () {
         noStroke();
         fill(this.color);
-        circle(this.bounds.x, this.bounds.y, this.bounds.r * 2);
-    };
-    Planet.prototype.mass = function () {
-        return this.bounds.r;
+        circle(this.pos.x, this.pos.y, this.bounds.r * 2);
     };
     return Planet;
 }());
 var Rocket = (function () {
-    function Rocket(x, y) {
+    function Rocket(x, y, dna) {
+        this.mass = 0;
         this.bounds = new Geometry.Rectangle(x, y, 10, 20);
-        this.vel = p5.Vector.fromAngle(PI / 4);
-        this.vel.rotate(random(-PI / 4, PI / 4));
+        this.start = new Geometry.Point(x, y);
+        this.acc = createVector(0, 0);
         this.dead = false;
+        this.dna = [];
+        if (!dna) {
+            for (var i = 0; i < ITERATION_MAX; i++) {
+                var nucleotide = p5.Vector.random2D();
+                nucleotide.setMag(random(0, 3));
+                this.dna.push(nucleotide);
+            }
+        }
+        else {
+            this.dna = dna;
+        }
     }
-    Object.defineProperty(Rocket.prototype, "x", {
+    Object.defineProperty(Rocket.prototype, "pos", {
         get: function () {
-            return this.bounds.x;
+            return this.bounds.corner;
         },
         enumerable: true,
         configurable: true
     });
-    Object.defineProperty(Rocket.prototype, "y", {
-        get: function () {
-            return this.bounds.y;
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Rocket.prototype.setSpeed = function (speed) {
-        this.vel.setMag(speed);
+    Rocket.prototype.reset = function () {
+        this.pos.x = this.start.x;
+        this.pos.y = this.start.y;
+        this.diedOn = 0;
+        this.dead = false;
     };
+    Rocket.prototype.die = function () {
+        this.dead = true;
+        this.diedOn = iterations;
+    };
+    Rocket.prototype.evaluate = function () {
+        this.fitness =
+            this.diedOn +
+                10 *
+                    Math.hypot(this.start.x - this.pos.x, this.start.y - this.pos.y) -
+                100 * (this.dead ? 1 : 0);
+        return this.fitness;
+    };
+    Rocket.from = function (rocket) {
+        return new Rocket(rocket.pos.x, rocket.pos.y, rocket.dna);
+    };
+    Object.defineProperty(Rocket.prototype, "vel", {
+        get: function () {
+            return this.dna[iterations];
+        },
+        enumerable: true,
+        configurable: true
+    });
     Rocket.prototype.update = function () {
-        if (this.bounds.x > width || this.bounds.x < 0)
-            this.dead = true;
-        if (this.bounds.y > height || this.bounds.y < 0)
-            this.dead = true;
+        if (this.pos.x > width ||
+            this.pos.x < 0 ||
+            this.pos.y > height ||
+            this.pos.y < 0)
+            this.die();
         this.bounds.angle = this.vel.heading();
         if (!this.dead) {
-            this.bounds.x += this.vel.x;
-            this.bounds.y += this.vel.y;
+            this.pos.x += this.vel.x;
+            this.pos.y += this.vel.y;
         }
-        var acc = new p5.Vector();
         for (var _i = 0, planets_1 = planets; _i < planets_1.length; _i++) {
             var planet = planets_1[_i];
             if (this.intersects(planet)) {
-                this.dead = true;
+                this.die();
                 return;
             }
-            var gravity = createVector(planet.x - this.x, planet.y - this.y);
-            gravity.setMag((G * planet.mass()) / (gravity.mag() * gravity.mag()));
-            acc.add(gravity);
         }
-        this.vel.x += acc.x;
-        this.vel.y += acc.y;
+    };
+    Rocket.prototype.applyForce = function (force) {
+        this.acc.add(force);
     };
     Rocket.prototype.intersects = function (p) {
         return p.bounds.intersects(this.bounds);
@@ -210,45 +263,125 @@ var Rocket = (function () {
     };
     return Rocket;
 }());
+var System = (function () {
+    function System(G) {
+        if (G === void 0) { G = 1; }
+        this.G = G;
+        this.bodies = [];
+    }
+    System.prototype.addBody = function (body) {
+        this.bodies.push(body);
+    };
+    System.prototype.draw = function () {
+        for (var _i = 0, _a = this.bodies; _i < _a.length; _i++) {
+            var body = _a[_i];
+            body.draw();
+        }
+    };
+    System.prototype.update = function () {
+        for (var _i = 0, _a = this.bodies; _i < _a.length; _i++) {
+            var body = _a[_i];
+            for (var _b = 0, _c = this.bodies; _b < _c.length; _b++) {
+                var m2 = _c[_b];
+                if (body !== m2) {
+                    var force = System.vectorBetween(body, m2);
+                    force.setMag((this.G * m2.mass) / force.magSq());
+                    body.applyForce(force);
+                }
+            }
+        }
+        for (var _d = 0, _e = this.bodies; _d < _e.length; _d++) {
+            var body = _e[_d];
+            for (var _f = 0, _g = this.bodies; _f < _g.length; _f++) {
+                var m2 = _g[_f];
+                if (body !== m2) {
+                    if (body.bounds.intersects(m2.bounds)) {
+                        var vector = System.vectorBetween(body, m2);
+                        vector.rotate(PI);
+                        body.applyForce(vector.mult(0.5));
+                        console.log("intersect");
+                    }
+                    console.log("no intersect");
+                }
+            }
+        }
+        for (var _h = 0, _j = this.bodies; _h < _j.length; _h++) {
+            var body = _j[_h];
+            body.vel.add(body.acc);
+            body.pos.add(body.vel);
+            body.acc.setMag(0);
+        }
+        iterations++;
+    };
+    System.vectorBetween = function (origin, terminal) {
+        var dx = terminal.pos.x - origin.pos.x;
+        var dy = terminal.pos.y - origin.pos.y;
+        return createVector(dx, dy);
+    };
+    System.prototype.orbit = function (body, around) {
+        var vel = System.vectorBetween(body, around);
+        vel.rotate(PI / 2);
+        vel.setMag(Math.sqrt((this.G * around.mass) / vel.mag()));
+        body.vel = vel;
+    };
+    System.offset = function (body, from, dx, dy) {
+        body.pos.x = from.pos.x + dx;
+        body.pos.y = from.pos.y + dy;
+    };
+    return System;
+}());
 var WIDTH = 800;
 var HEIGHT = 600;
-var BATCH_SIZE = 8;
-var G = 5;
+var BIG_R = WIDTH / 20;
+var numBodies = 5;
+var WS = WIDTH / (numBodies + 1);
+var HS = HEIGHT / (numBodies + 1);
+var BATCH_SIZE = 16;
+var iterations = 0;
+var ITERATION_MAX = 300;
 var hist = [];
 var batch;
 var planets;
+var solarSystem;
 var slider;
 function setup() {
     createCanvas(WIDTH, HEIGHT);
-    var BIG_R = width / 20;
-    var W5 = width / 5;
-    var H6 = height / 6;
-    batch = new Batch(BATCH_SIZE, 4 * W5 + (2 * BIG_R) / 3, 2 * H6 + (2 * BIG_R) / 3);
-    batch.setSpeed(2);
-    var SUN = new Planet(W5, 5 * H6, BIG_R, "#ff0");
-    var MERCURY = new Planet(2 * W5, 4 * H6, BIG_R / 3, "#750");
-    var VENUS = new Planet(3 * W5, 3 * H6, BIG_R / 3, "#070");
-    var EARTH = new Planet(4 * W5, 2 * H6, BIG_R / 2, "#13f");
-    var MARS = new Planet(5 * W5, 1 * H6, BIG_R / 2, "#720");
-    planets = [SUN, MERCURY, VENUS, EARTH, MARS];
-    slider = createSlider(0, 10, G, 0.1);
+    solarSystem = new System(2);
+    batch = new Batch(BATCH_SIZE, 4 * WS + (2 * BIG_R) / 3, 2 * HS + (2 * BIG_R) / 3);
+    var SUN = new Planet(width / 2, height / 2, BIG_R, "#ff0");
+    SUN.mass = BIG_R * 125;
+    var MERCURY = new Planet(2 * WS, 4 * HS, BIG_R / 3, "#750");
+    System.offset(MERCURY, SUN, 0, height / 4);
+    solarSystem.orbit(MERCURY, SUN);
+    var VENUS = new Planet(3 * WS, 3 * HS, BIG_R / 3, "#070");
+    System.offset(VENUS, SUN, height / 3, 0);
+    solarSystem.orbit(VENUS, SUN);
+    var EARTH = new Planet(4 * WS, 2 * HS, BIG_R / 2, "#13f");
+    System.offset(EARTH, SUN, 0, -height / 2);
+    solarSystem.orbit(EARTH, SUN);
+    var MARS = new Planet(5 * WS, 1 * HS, BIG_R / 2, "#720");
+    System.offset(MARS, SUN, -height / 2, 0);
+    solarSystem.orbit(MARS, SUN);
+    solarSystem.addBody(SUN);
+    solarSystem.addBody(MERCURY);
+    solarSystem.addBody(VENUS);
+    solarSystem.addBody(EARTH);
+    solarSystem.addBody(MARS);
+    slider = createSlider(0, 10, solarSystem.G, 0.1);
     createButton("Restart").mousePressed(function () {
         batch = new Batch(BATCH_SIZE, width / 2, height / 3);
+        iterations = 0;
+        loop();
     });
 }
 function draw() {
-    G = slider.value();
+    solarSystem.G = slider.value();
     background(0);
-    for (var _i = 0, planets_2 = planets; _i < planets_2.length; _i++) {
-        var planet = planets_2[_i];
-        planet.draw();
-        strokeWeight(5);
-        stroke(255, 0, 0);
-    }
-    batch.draw();
-    batch.update();
-}
-function windowResized() {
-    createCanvas(WIDTH, HEIGHT);
+    stroke(255);
+    fill(255);
+    textSize(height / 10);
+    text(iterations, 10, height / 10);
+    solarSystem.draw();
+    solarSystem.update();
 }
 //# sourceMappingURL=build.js.map

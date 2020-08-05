@@ -3,13 +3,6 @@ namespace Geometry {
 		return false;
 	}
 
-	export function rectangleInCircle(
-		rect: Rectangle,
-		circle: Circle
-	): boolean {
-		return false;
-	}
-
 	interface Line {
 		x1: number;
 		y1: number;
@@ -17,9 +10,19 @@ namespace Geometry {
 		y2: number;
 	}
 
-	interface Point {
+	export class Point {
 		x: number;
 		y: number;
+
+		constructor(x: number, y: number) {
+			this.x = x;
+			this.y = y;
+		}
+
+		add(v: p5.Vector) {
+			this.x += v.x;
+			this.y += v.y;
+		}
 	}
 
 	export function rotatePoint(p: Point, around: Point, angle: number) {
@@ -35,11 +38,10 @@ namespace Geometry {
 		};
 	}
 
-	type Boundary = Rectangle | Circle;
+	export type Boundary = Rectangle | Circle;
 
 	export class Rectangle {
-		x: number;
-		y: number;
+		corner: Point;
 		w: number;
 		h: number;
 		angle: number;
@@ -51,34 +53,34 @@ namespace Geometry {
 			h: number,
 			angle: number = 0
 		) {
-			this.x = x;
-			this.y = y;
+			this.corner = new Point(x, y);
 			this.w = w;
 			this.h = h;
 			this.angle = angle;
 		}
 
-		get center() {
-			return { x: this.x + this.w / 2, y: this.y + this.h / 2 };
-		}
-	}
-
-	export class Circle {
-		x: number;
-		y: number;
-		r: number;
-		type: "circle" = "circle";
-		constructor(x: number, y: number, r: number) {
-			this.x = x;
-			this.y = y;
-			this.r = r;
+		intersects(b: Boundary) {
+			if (b.type === "circle") {
+				return b.intersectRect(this);
+			}
+			return false;
 		}
 
 		get center() {
 			return {
-				x: this.x,
-				y: this.y,
+				x: this.corner.x + this.w / 2,
+				y: this.corner.y + this.h / 2,
 			};
+		}
+	}
+
+	export class Circle {
+		center: Point;
+		r: number;
+		type: "circle" = "circle";
+		constructor(x: number, y: number, r: number) {
+			this.center = new Point(x, y);
+			this.r = r;
 		}
 
 		intersects(b: Boundary): boolean {
@@ -101,7 +103,7 @@ namespace Geometry {
 
 			const newPoint = Geometry.rotatePoint(
 				this.center,
-				{ x: rect.x, y: rect.y },
+				rect.corner,
 				rect.angle + PI / 2
 			);
 			// if (newPoint.x < rect.x || newPoint.x > rect.x + rect.w)
