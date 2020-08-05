@@ -32,26 +32,26 @@ function setup() {
 	// 	2 * HS + (2 * BIG_R) / 3
 	// );
 
-	const SUN = new Planet(width / 2, height / 2, BIG_R, "#ff0");
+	const SUN = new Planet(width / 2, height / 2, BIG_R, "#ff0", "Sun");
 	SUN.input.parent(pcontrols);
 	SUN.mass = BIG_R * 125;
 
-	const MERCURY = new Planet(0, 0, BIG_R / 3, "#750");
+	const MERCURY = new Planet(0, 0, BIG_R / 3, "#750", "Mercury");
 	MERCURY.input.parent(pcontrols);
 	System.offset(MERCURY, SUN, 0, height / 4);
 	solarSystem.orbit(MERCURY, SUN);
 
-	const VENUS = new Planet(0, 0, BIG_R / 3, "#070");
+	const VENUS = new Planet(0, 0, BIG_R / 3, "#070", "Venus");
 	VENUS.input.parent(pcontrols);
 	System.offset(VENUS, SUN, height / 3, 0);
 	solarSystem.orbit(VENUS, SUN);
 
-	const EARTH = new Planet(0, 0, BIG_R / 2, "#13f");
+	const EARTH = new Planet(0, 0, BIG_R / 2, "#13f", "Earth");
 	EARTH.input.parent(pcontrols);
 	System.offset(EARTH, SUN, 0, -height / 2);
 	solarSystem.orbit(EARTH, SUN);
 
-	const MARS = new Planet(0, 0, BIG_R / 2, "#720");
+	const MARS = new Planet(0, 0, BIG_R / 2, "#720", "Mars");
 	MARS.input.parent(pcontrols);
 	System.offset(MARS, SUN, -height / 2, 0);
 	solarSystem.orbit(MARS, SUN);
@@ -81,6 +81,7 @@ function draw() {
 	stroke(255);
 	fill(255);
 	textSize(height / 10);
+	textAlign(LEFT);
 	text(iterations, 10, height / 10);
 
 	solarSystem.draw();

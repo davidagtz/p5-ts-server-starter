@@ -143,12 +143,26 @@ var Geometry;
     }());
     Geometry.Circle = Circle;
 })(Geometry || (Geometry = {}));
+function createLabeledInput(label, options) {
+    if (options === void 0) { options = {}; }
+    var parent = createDiv();
+    createElement("label", label).parent(parent);
+    var input = createInput().value(options.value).parent(parent);
+    if (options.onchange) {
+        input.elt.onchange = function () {
+            options.onchange(input);
+        };
+    }
+    return parent;
+}
 var Planet = (function () {
-    function Planet(x, y, r, color) {
+    function Planet(x, y, r, color, name) {
+        var _this = this;
         x = Math.round(x);
         y = Math.round(y);
         this.bounds = new Geometry.Circle(x, y, r);
         this.color = color;
+        this.name = name !== null && name !== void 0 ? name : this.randomName();
         this.mass = r;
         this.vel = createVector(0, 0);
         this.acc = createVector(0, 0);
@@ -158,16 +172,40 @@ var Planet = (function () {
             acc: this.acc.copy(),
         };
         var info = createDiv();
-        var xIn = createInput("x: ").value(x).parent(info);
-        var yIn = createInput("y: ").value(y).parent(info);
-        var cIn = createInput("color: ").value(color).parent(info);
-        cIn.elt.onchange = function () {
-            this.color = cIn.value();
-        }.bind(this);
+        var nIn = createLabeledInput("name: ", {
+            value: this.name,
+            onchange: function (el) {
+                _this.name = el.value();
+            },
+        }).parent(info);
+        var xIn = createLabeledInput("x: ", {
+            value: x,
+            onchange: function (el) {
+                _this.moveStart(parseInt(el.value(), 10), _this.start.origin.y);
+            },
+        }).parent(info);
+        var yIn = createLabeledInput("y: ", {
+            value: y,
+            onchange: function (el) {
+                _this.moveStart(_this.start.origin.x, parseInt(el.value(), 10));
+            },
+        }).parent(info);
+        var mIn = createLabeledInput("mass: ", {
+            value: this.mass,
+            onchange: function (el) {
+                _this.mass = parseInt(el.value(), 10);
+            },
+        }).parent(info);
+        var cIn = createLabeledInput("color: ", {
+            value: color,
+            onchange: function (el) {
+                _this.color = el.value();
+            },
+        }).parent(info);
         this.inputs = {
-            x: xIn,
-            y: yIn,
-            color: cIn,
+            x: xIn.child()[1],
+            y: yIn.child()[1],
+            color: cIn.child()[1],
         };
         this.input = info;
     }
@@ -186,10 +224,12 @@ var Planet = (function () {
     Planet.prototype.moveStart = function (x, y) {
         x = Math.round(x);
         y = Math.round(y);
-        this.bounds.center = new Geometry.Point(x, y);
-        this.start.origin = this.bounds.center.copy();
-        this.inputs.x.value(x);
-        this.inputs.y.value(y);
+        this.start.origin = new Geometry.Point(x, y);
+        if (iterations === 0) {
+            this.bounds.center = this.start.origin.copy();
+        }
+        this.inputs.x.value = x;
+        this.inputs.y.value = y;
     };
     Planet.prototype.applyForce = function (force) {
         this.acc.add(force);
@@ -198,6 +238,23 @@ var Planet = (function () {
         noStroke();
         fill(this.color);
         circle(this.pos.x, this.pos.y, this.bounds.r * 2);
+        fill(255);
+        textAlign(CENTER);
+        textSize(this.bounds.r);
+        text(this.name, this.pos.x, this.pos.y - this.bounds.r - 2);
+    };
+    Planet.prototype.randomName = function () {
+        var name = "P-";
+        for (var i = 0; i < 6; i++) {
+            var char_1 = Math.floor(random(1, 37));
+            if (char_1 <= 26) {
+                name += String.fromCharCode(char_1 + 64);
+            }
+            else {
+                name += String.fromCharCode(char_1 + 21);
+            }
+        }
+        return name;
     };
     return Planet;
 }());
@@ -380,22 +437,22 @@ function setup() {
     canvas.parent(container);
     BIG_R = width / 20;
     solarSystem = new System(2);
-    var SUN = new Planet(width / 2, height / 2, BIG_R, "#ff0");
+    var SUN = new Planet(width / 2, height / 2, BIG_R, "#ff0", "Sun");
     SUN.input.parent(pcontrols);
     SUN.mass = BIG_R * 125;
-    var MERCURY = new Planet(0, 0, BIG_R / 3, "#750");
+    var MERCURY = new Planet(0, 0, BIG_R / 3, "#750", "Mercury");
     MERCURY.input.parent(pcontrols);
     System.offset(MERCURY, SUN, 0, height / 4);
     solarSystem.orbit(MERCURY, SUN);
-    var VENUS = new Planet(0, 0, BIG_R / 3, "#070");
+    var VENUS = new Planet(0, 0, BIG_R / 3, "#070", "Venus");
     VENUS.input.parent(pcontrols);
     System.offset(VENUS, SUN, height / 3, 0);
     solarSystem.orbit(VENUS, SUN);
-    var EARTH = new Planet(0, 0, BIG_R / 2, "#13f");
+    var EARTH = new Planet(0, 0, BIG_R / 2, "#13f", "Earth");
     EARTH.input.parent(pcontrols);
     System.offset(EARTH, SUN, 0, -height / 2);
     solarSystem.orbit(EARTH, SUN);
-    var MARS = new Planet(0, 0, BIG_R / 2, "#720");
+    var MARS = new Planet(0, 0, BIG_R / 2, "#720", "Mars");
     MARS.input.parent(pcontrols);
     System.offset(MARS, SUN, -height / 2, 0);
     solarSystem.orbit(MARS, SUN);
@@ -419,6 +476,7 @@ function draw() {
     stroke(255);
     fill(255);
     textSize(height / 10);
+    textAlign(LEFT);
     text(iterations, 10, height / 10);
     solarSystem.draw();
     solarSystem.update();
