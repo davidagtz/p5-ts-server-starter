@@ -15,6 +15,7 @@ let slider: p5.Element;
 function setup() {
 	const container = document.getElementById("canvas");
 	const controls = document.getElementById("controls");
+	const pcontrols = document.getElementById("planets");
 
 	const canvas = createCanvas(
 		container.getBoundingClientRect().width,
@@ -32,21 +33,26 @@ function setup() {
 	// );
 
 	const SUN = new Planet(width / 2, height / 2, BIG_R, "#ff0");
+	SUN.input.parent(pcontrols);
 	SUN.mass = BIG_R * 125;
 
 	const MERCURY = new Planet(0, 0, BIG_R / 3, "#750");
+	MERCURY.input.parent(pcontrols);
 	System.offset(MERCURY, SUN, 0, height / 4);
 	solarSystem.orbit(MERCURY, SUN);
 
 	const VENUS = new Planet(0, 0, BIG_R / 3, "#070");
+	VENUS.input.parent(pcontrols);
 	System.offset(VENUS, SUN, height / 3, 0);
 	solarSystem.orbit(VENUS, SUN);
 
 	const EARTH = new Planet(0, 0, BIG_R / 2, "#13f");
+	EARTH.input.parent(pcontrols);
 	System.offset(EARTH, SUN, 0, -height / 2);
 	solarSystem.orbit(EARTH, SUN);
 
 	const MARS = new Planet(0, 0, BIG_R / 2, "#720");
+	MARS.input.parent(pcontrols);
 	System.offset(MARS, SUN, -height / 2, 0);
 	solarSystem.orbit(MARS, SUN);
 
@@ -60,8 +66,9 @@ function setup() {
 
 	createButton("Restart")
 		.mousePressed(() => {
-			batch = new Batch(BATCH_SIZE, width / 2, height / 3);
+			// batch = new Batch(BATCH_SIZE, width / 2, height / 3);
 			iterations = 0;
+			solarSystem.reset();
 			loop();
 		})
 		.parent(controls);

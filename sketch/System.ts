@@ -9,10 +9,13 @@ interface SystemBody {
 		  };
 	acc: p5.Vector;
 	vel: p5.Vector;
+	bounds: Geometry.Boundary;
 
 	applyForce: (v: p5.Vector) => void;
 	draw: () => void;
-	bounds: Geometry.Boundary;
+	reset: () => void;
+	moveStart: (x: number, y: number) => void;
+	start?: any;
 }
 
 class System {
@@ -75,16 +78,22 @@ class System {
 		return createVector(dx, dy);
 	}
 
+	reset() {
+		for (const body of this.bodies) {
+			body.reset();
+		}
+	}
+
 	orbit(body: SystemBody, around: SystemBody) {
 		const vel = System.vectorBetween(body, around);
 		vel.rotate(PI / 2);
 		vel.setMag(Math.sqrt((this.G * around.mass) / vel.mag()));
 
 		body.vel = vel;
+		if (body.start) body.start.vel = vel.copy();
 	}
 
 	static offset(body: SystemBody, from: SystemBody, dx: number, dy: number) {
-		body.pos.x = from.pos.x + dx;
-		body.pos.y = from.pos.y + dy;
+		body.moveStart(from.pos.x + dx, from.pos.y + dy);
 	}
 }

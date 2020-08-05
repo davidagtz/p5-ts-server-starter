@@ -23,6 +23,10 @@ namespace Geometry {
 			this.x += v.x;
 			this.y += v.y;
 		}
+
+		copy() {
+			return new Point(this.x, this.y);
+		}
 	}
 
 	export function rotatePoint(p: Point, around: Point, angle: number) {

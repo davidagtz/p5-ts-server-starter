@@ -67,6 +67,9 @@ var Geometry;
             this.x += v.x;
             this.y += v.y;
         };
+        Point.prototype.copy = function () {
+            return new Point(this.x, this.y);
+        };
         return Point;
     }());
     Geometry.Point = Point;
@@ -142,11 +145,31 @@ var Geometry;
 })(Geometry || (Geometry = {}));
 var Planet = (function () {
     function Planet(x, y, r, color) {
+        x = Math.round(x);
+        y = Math.round(y);
         this.bounds = new Geometry.Circle(x, y, r);
         this.color = color;
         this.mass = r;
         this.vel = createVector(0, 0);
         this.acc = createVector(0, 0);
+        this.start = {
+            origin: this.bounds.center.copy(),
+            vel: this.vel.copy(),
+            acc: this.acc.copy(),
+        };
+        var info = createDiv();
+        var xIn = createInput("x: ").value(x).parent(info);
+        var yIn = createInput("y: ").value(y).parent(info);
+        var cIn = createInput("color: ").value(color).parent(info);
+        cIn.elt.onchange = function () {
+            this.color = cIn.value();
+        }.bind(this);
+        this.inputs = {
+            x: xIn,
+            y: yIn,
+            color: cIn,
+        };
+        this.input = info;
     }
     Object.defineProperty(Planet.prototype, "pos", {
         get: function () {
@@ -155,6 +178,19 @@ var Planet = (function () {
         enumerable: true,
         configurable: true
     });
+    Planet.prototype.reset = function () {
+        this.bounds.center = this.start.origin.copy();
+        this.vel = this.start.vel.copy();
+        this.acc = this.start.acc.copy();
+    };
+    Planet.prototype.moveStart = function (x, y) {
+        x = Math.round(x);
+        y = Math.round(y);
+        this.bounds.center = new Geometry.Point(x, y);
+        this.start.origin = this.bounds.center.copy();
+        this.inputs.x.value(x);
+        this.inputs.y.value(y);
+    };
     Planet.prototype.applyForce = function (force) {
         this.acc.add(force);
     };
@@ -238,6 +274,10 @@ var Rocket = (function () {
             }
         }
     };
+    Rocket.prototype.moveStart = function (x, y) {
+        this.start = new Geometry.Point(x, y);
+        this.bounds.corner = this.start;
+    };
     Rocket.prototype.applyForce = function (force) {
         this.acc.add(force);
     };
@@ -303,15 +343,22 @@ var System = (function () {
         var dy = terminal.pos.y - origin.pos.y;
         return createVector(dx, dy);
     };
+    System.prototype.reset = function () {
+        for (var _i = 0, _a = this.bodies; _i < _a.length; _i++) {
+            var body = _a[_i];
+            body.reset();
+        }
+    };
     System.prototype.orbit = function (body, around) {
         var vel = System.vectorBetween(body, around);
         vel.rotate(PI / 2);
         vel.setMag(Math.sqrt((this.G * around.mass) / vel.mag()));
         body.vel = vel;
+        if (body.start)
+            body.start.vel = vel.copy();
     };
     System.offset = function (body, from, dx, dy) {
-        body.pos.x = from.pos.x + dx;
-        body.pos.y = from.pos.y + dy;
+        body.moveStart(from.pos.x + dx, from.pos.y + dy);
     };
     return System;
 }());
@@ -328,22 +375,28 @@ var slider;
 function setup() {
     var container = document.getElementById("canvas");
     var controls = document.getElementById("controls");
+    var pcontrols = document.getElementById("planets");
     var canvas = createCanvas(container.getBoundingClientRect().width, container.getBoundingClientRect().height);
     canvas.parent(container);
     BIG_R = width / 20;
     solarSystem = new System(2);
     var SUN = new Planet(width / 2, height / 2, BIG_R, "#ff0");
+    SUN.input.parent(pcontrols);
     SUN.mass = BIG_R * 125;
     var MERCURY = new Planet(0, 0, BIG_R / 3, "#750");
+    MERCURY.input.parent(pcontrols);
     System.offset(MERCURY, SUN, 0, height / 4);
     solarSystem.orbit(MERCURY, SUN);
     var VENUS = new Planet(0, 0, BIG_R / 3, "#070");
+    VENUS.input.parent(pcontrols);
     System.offset(VENUS, SUN, height / 3, 0);
     solarSystem.orbit(VENUS, SUN);
     var EARTH = new Planet(0, 0, BIG_R / 2, "#13f");
+    EARTH.input.parent(pcontrols);
     System.offset(EARTH, SUN, 0, -height / 2);
     solarSystem.orbit(EARTH, SUN);
     var MARS = new Planet(0, 0, BIG_R / 2, "#720");
+    MARS.input.parent(pcontrols);
     System.offset(MARS, SUN, -height / 2, 0);
     solarSystem.orbit(MARS, SUN);
     solarSystem.addBody(SUN);
@@ -354,8 +407,8 @@ function setup() {
     slider = createSlider(0, 10, solarSystem.G, 0.1).parent(controls);
     createButton("Restart")
         .mousePressed(function () {
-        batch = new Batch(BATCH_SIZE, width / 2, height / 3);
         iterations = 0;
+        solarSystem.reset();
         loop();
     })
         .parent(controls);

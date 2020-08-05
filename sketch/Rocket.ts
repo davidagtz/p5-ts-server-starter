@@ -94,6 +94,11 @@ class Rocket implements SystemBody {
 		}
 	}
 
+	moveStart(x: number, y: number) {
+		this.start = new Geometry.Point(x, y);
+		this.bounds.corner = this.start;
+	}
+
 	applyForce(force: p5.Vector) {
 		this.acc.add(force);
 	}
