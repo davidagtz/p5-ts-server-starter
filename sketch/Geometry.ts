@@ -24,6 +24,10 @@ namespace Geometry {
 			this.y += v.y;
 		}
 
+		dist(p: Point) {
+			return Math.hypot(this.x - p.x, this.y - p.y);
+		}
+
 		copy() {
 			return new Point(this.x, this.y);
 		}
@@ -90,6 +94,8 @@ namespace Geometry {
 		intersects(b: Boundary): boolean {
 			if (b.type === "rectangle") {
 				return this.intersectRect(b);
+			} else if (b.type === "circle") {
+				return this.center.dist(b.center) < this.r + b.r;
 			}
 			return false;
 		}

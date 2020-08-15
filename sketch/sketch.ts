@@ -34,27 +34,28 @@ function setup() {
 
 	const SUN = new Planet(width / 2, height / 2, BIG_R, "#ff0", "Sun");
 	SUN.input.parent(pcontrols);
-	SUN.mass = BIG_R * 125;
+	SUN.setMass(BIG_R * 50);
 
 	const MERCURY = new Planet(0, 0, BIG_R / 3, "#750", "Mercury");
 	MERCURY.input.parent(pcontrols);
 	System.offset(MERCURY, SUN, 0, height / 4);
-	solarSystem.orbit(MERCURY, SUN);
 
 	const VENUS = new Planet(0, 0, BIG_R / 3, "#070", "Venus");
 	VENUS.input.parent(pcontrols);
 	System.offset(VENUS, SUN, height / 3, 0);
-	solarSystem.orbit(VENUS, SUN);
 
 	const EARTH = new Planet(0, 0, BIG_R / 2, "#13f", "Earth");
 	EARTH.input.parent(pcontrols);
 	System.offset(EARTH, SUN, 0, -height / 2);
-	solarSystem.orbit(EARTH, SUN);
 
 	const MARS = new Planet(0, 0, BIG_R / 2, "#720", "Mars");
 	MARS.input.parent(pcontrols);
 	System.offset(MARS, SUN, -height / 2, 0);
-	solarSystem.orbit(MARS, SUN);
+
+	// solarSystem.orbit(MERCURY, SUN);
+	// solarSystem.orbit(VENUS, SUN);
+	// solarSystem.orbit(EARTH, SUN);
+	// solarSystem.orbit(MARS, SUN);
 
 	solarSystem.addBody(SUN);
 	solarSystem.addBody(MERCURY);

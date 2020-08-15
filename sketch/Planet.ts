@@ -96,6 +96,7 @@ class Planet implements SystemBody {
 			x: xIn.child()[1],
 			y: yIn.child()[1],
 			color: cIn.child()[1],
+			mass: mIn.child()[1],
 		};
 
 		this.input = info;
@@ -125,14 +126,44 @@ class Planet implements SystemBody {
 	}
 
 	draw() {
+		let x = this.pos.x;
+		let y = this.pos.y;
+		const radius = this.bounds.r * 4 + 10;
+
+		let isOutside = false;
+		if (y < 0 || y > height) {
+			y = Math.max(0, Math.min(y, height));
+			isOutside = true;
+			if (y <= 0) y += radius / 2;
+			else y -= radius / 2;
+		}
+		if (x < 0 || x > width) {
+			isOutside = true;
+			x = Math.max(0, Math.min(x, width));
+			if (x <= 0) x += radius / 2;
+			else x -= radius / 2;
+		}
+		if (isOutside) {
+			strokeWeight(5);
+			stroke(127);
+			noFill();
+			circle(x, y, radius);
+		}
 		noStroke();
 		fill(this.color);
-		circle(this.pos.x, this.pos.y, this.bounds.r * 2);
+		circle(x, y, this.bounds.r * 2);
 
 		fill(255);
 		textAlign(CENTER);
 		textSize(this.bounds.r);
-		text(this.name, this.pos.x, this.pos.y - this.bounds.r - 2);
+		text(this.name, x, y - this.bounds.r - 2);
+		if (isOutside) {
+			text(
+				`${int(this.pos.x)}, ${int(this.pos.y)}`,
+				x,
+				y + 2 * this.bounds.r
+			);
+		}
 	}
 
 	randomName() {
@@ -146,5 +177,14 @@ class Planet implements SystemBody {
 			}
 		}
 		return name;
+	}
+
+	setMass(mass: number) {
+		this.mass = mass;
+		(this.inputs.mass as any).value = mass;
+	}
+
+	intersects(body: SystemBody) {
+		return this.bounds.intersects(body.bounds);
 	}
 }

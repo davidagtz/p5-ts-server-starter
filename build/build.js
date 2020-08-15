@@ -67,6 +67,9 @@ var Geometry;
             this.x += v.x;
             this.y += v.y;
         };
+        Point.prototype.dist = function (p) {
+            return Math.hypot(this.x - p.x, this.y - p.y);
+        };
         Point.prototype.copy = function () {
             return new Point(this.x, this.y);
         };
@@ -121,6 +124,9 @@ var Geometry;
         Circle.prototype.intersects = function (b) {
             if (b.type === "rectangle") {
                 return this.intersectRect(b);
+            }
+            else if (b.type === "circle") {
+                return this.center.dist(b.center) < this.r + b.r;
             }
             return false;
         };
@@ -206,6 +212,7 @@ var Planet = (function () {
             x: xIn.child()[1],
             y: yIn.child()[1],
             color: cIn.child()[1],
+            mass: mIn.child()[1],
         };
         this.input = info;
     }
@@ -235,13 +242,42 @@ var Planet = (function () {
         this.acc.add(force);
     };
     Planet.prototype.draw = function () {
+        var x = this.pos.x;
+        var y = this.pos.y;
+        var radius = this.bounds.r * 4 + 10;
+        var isOutside = false;
+        if (y < 0 || y > height) {
+            y = Math.max(0, Math.min(y, height));
+            isOutside = true;
+            if (y <= 0)
+                y += radius / 2;
+            else
+                y -= radius / 2;
+        }
+        if (x < 0 || x > width) {
+            isOutside = true;
+            x = Math.max(0, Math.min(x, width));
+            if (x <= 0)
+                x += radius / 2;
+            else
+                x -= radius / 2;
+        }
+        if (isOutside) {
+            strokeWeight(5);
+            stroke(127);
+            noFill();
+            circle(x, y, radius);
+        }
         noStroke();
         fill(this.color);
-        circle(this.pos.x, this.pos.y, this.bounds.r * 2);
+        circle(x, y, this.bounds.r * 2);
         fill(255);
         textAlign(CENTER);
         textSize(this.bounds.r);
-        text(this.name, this.pos.x, this.pos.y - this.bounds.r - 2);
+        text(this.name, x, y - this.bounds.r - 2);
+        if (isOutside) {
+            text(int(this.pos.x) + ", " + int(this.pos.y), x, y + 2 * this.bounds.r);
+        }
     };
     Planet.prototype.randomName = function () {
         var name = "P-";
@@ -255,6 +291,13 @@ var Planet = (function () {
             }
         }
         return name;
+    };
+    Planet.prototype.setMass = function (mass) {
+        this.mass = mass;
+        this.inputs.mass.value = mass;
+    };
+    Planet.prototype.intersects = function (body) {
+        return this.bounds.intersects(body.bounds);
     };
     return Planet;
 }());
@@ -374,6 +417,9 @@ var System = (function () {
             var body = _a[_i];
             body.draw();
         }
+        stroke(255, 0, 0);
+        strokeWeight(5);
+        point(this.centerOfMass().x, this.centerOfMass().y);
     };
     System.prototype.update = function () {
         for (var _i = 0, _a = this.bodies; _i < _a.length; _i++) {
@@ -389,11 +435,39 @@ var System = (function () {
         }
         for (var _d = 0, _e = this.bodies; _d < _e.length; _d++) {
             var body = _e[_d];
+            for (var _f = 0, _g = this.bodies; _f < _g.length; _f++) {
+                var m2 = _g[_f];
+                if (body !== m2) {
+                    if (body.intersects(m2)) {
+                        var v3 = p5.Vector.mult(body.vel, body.mass);
+                        v3.add(p5.Vector.mult(m2.vel, m2.mass));
+                        v3.div(body.mass + m2.mass);
+                        body.applyForce(p5.Vector.sub(v3, body.vel));
+                        System.drawVector(body.pos, p5.Vector.sub(v3, body.vel));
+                    }
+                }
+            }
+        }
+        for (var _h = 0, _j = this.bodies; _h < _j.length; _h++) {
+            var body = _j[_h];
             body.vel.add(body.acc);
             body.pos.add(body.vel);
             body.acc.setMag(0);
         }
         iterations++;
+    };
+    System.drawVector = function (p, v) {
+        strokeWeight(1);
+        stroke(255, 0, 0);
+        push();
+        translate(p.x, p.y);
+        line(0, 0, v.x, v.y);
+        translate(v.x, v.y);
+        rotate(PI / 6 + v.heading());
+        line(0, 0, 0, 5);
+        rotate((2 * PI) / 3);
+        line(0, 0, 0, 5);
+        pop();
     };
     System.vectorBetween = function (origin, terminal) {
         var dx = terminal.pos.x - origin.pos.x;
@@ -413,6 +487,17 @@ var System = (function () {
         body.vel = vel;
         if (body.start)
             body.start.vel = vel.copy();
+    };
+    System.prototype.centerOfMass = function () {
+        var xbar = 0;
+        var ybar = 0;
+        var massSum = 0;
+        for (var i = 0; i < this.bodies.length; i++) {
+            massSum += this.bodies[i].mass;
+            xbar += this.bodies[i].mass * this.bodies[i].pos.x;
+            ybar += this.bodies[i].mass * this.bodies[i].pos.y;
+        }
+        return new Geometry.Point(xbar / massSum, ybar / massSum);
     };
     System.offset = function (body, from, dx, dy) {
         body.moveStart(from.pos.x + dx, from.pos.y + dy);
@@ -439,23 +524,19 @@ function setup() {
     solarSystem = new System(2);
     var SUN = new Planet(width / 2, height / 2, BIG_R, "#ff0", "Sun");
     SUN.input.parent(pcontrols);
-    SUN.mass = BIG_R * 125;
+    SUN.setMass(BIG_R * 50);
     var MERCURY = new Planet(0, 0, BIG_R / 3, "#750", "Mercury");
     MERCURY.input.parent(pcontrols);
     System.offset(MERCURY, SUN, 0, height / 4);
-    solarSystem.orbit(MERCURY, SUN);
     var VENUS = new Planet(0, 0, BIG_R / 3, "#070", "Venus");
     VENUS.input.parent(pcontrols);
     System.offset(VENUS, SUN, height / 3, 0);
-    solarSystem.orbit(VENUS, SUN);
     var EARTH = new Planet(0, 0, BIG_R / 2, "#13f", "Earth");
     EARTH.input.parent(pcontrols);
     System.offset(EARTH, SUN, 0, -height / 2);
-    solarSystem.orbit(EARTH, SUN);
     var MARS = new Planet(0, 0, BIG_R / 2, "#720", "Mars");
     MARS.input.parent(pcontrols);
     System.offset(MARS, SUN, -height / 2, 0);
-    solarSystem.orbit(MARS, SUN);
     solarSystem.addBody(SUN);
     solarSystem.addBody(MERCURY);
     solarSystem.addBody(VENUS);
